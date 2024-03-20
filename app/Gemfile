@@ -1,0 +1,7 @@
+source 'https://rubygems.org'
+
+ruby '~> 3.2.0'
+
+gem 'json'
+gem 'httparty'
+gem 'telegram-bot-ruby'
