@@ -5,6 +5,11 @@ Description: >
 
   Sample SAM Template for HelloFromWorkshop
 
+Parameters:
+  DynamoDBIndexName:
+    Type: String
+    Default: MessageGSI
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -19,6 +24,8 @@ Globals:
       Variables:
         API_TOKEN: 'api token'
         TELEGRAM_BOT_TOKEN: tg bot token
+        DYNAMODB_TABLE: !Ref AmazingDB
+        DYNAMODB_INDEX_NAME: !Ref DynamoDBIndexName
 
 Resources:
   WebhooksFunction:
@@ -26,6 +33,57 @@ Resources:
     Properties:
       FunctionUrlConfig:
         AuthType: NONE
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: "Allow"
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: 
+                - !GetAtt AmazingDB.Arn
+                - !Sub "${AmazingDB.Arn}/index/*"
+  AmazingDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "id"
+          AttributeType: "N"
+        - AttributeName: "message"
+          AttributeType: "S"
+        - AttributeName: "timestamp"
+          AttributeType: "N"
+      KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"
+        - AttributeName: "timestamp"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      LocalSecondaryIndexes:
+        - IndexName: "TimestampLSI"
+          KeySchema:
+            - AttributeName: "id"
+              KeyType: "HASH"
+            - AttributeName: "timestamp"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      GlobalSecondaryIndexes:
+        - IndexName: !Ref DynamoDBIndexName
+          KeySchema:
+            - AttributeName: "message"
+              KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+            
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
